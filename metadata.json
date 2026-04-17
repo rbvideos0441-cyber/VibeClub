@@ -1,0 +1,8 @@
+{
+  "name": "VibeClub",
+  "description": "Plataforma de streaming ao vivo com sistema de moedas ◈ VibeCoins, chat em tempo real e interação entre hosts e participantes.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}

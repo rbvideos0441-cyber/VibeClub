@@ -1,0 +1,181 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile and balance information.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "description": "Full name" },
+        "email": { "type": "string", "format": "email" },
+        "avatar": { "type": "string", "format": "uri" },
+        "banner": { "type": "string", "format": "uri" },
+        "bio": { "type": "string" },
+        "gallery": { 
+          "type": "array", 
+          "items": { 
+            "type": "object",
+            "properties": {
+              "url": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "role": { "type": "string", "enum": ["viewer", "host", "admin"] },
+        "coins": { "type": "number", "description": "VibeCoins balance" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["name", "email", "role", "coins", "createdAt"]
+    },
+    "Live": {
+      "title": "Live",
+      "description": "Streaming session metadata.",
+      "type": "object",
+      "properties": {
+        "hostId": { "type": "string" },
+        "hostName": { "type": "string" },
+        "hostAvatar": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "thumbnail": { "type": "string" },
+        "status": { "type": "string", "enum": ["scheduled", "live", "ended"] },
+        "coinEntry": { "type": "number" },
+        "slotCost": { "type": "number" },
+        "viewerCount": { "type": "number" },
+        "category": { "type": "string" },
+        "startedAt": { "type": "number" },
+        "endedAt": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["hostId", "hostName", "title", "status", "coinEntry", "slotCost", "viewerCount", "category", "createdAt"]
+    },
+    "CoinTransaction": {
+      "title": "CoinTransaction",
+      "description": "History of coin purchases and transfers.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["purchase", "gift", "entry_fee", "slot_fee", "withdrawal", "bonus", "refund"] },
+        "amount": { "type": "number" },
+        "description": { "type": "string" },
+        "liveId": { "type": "string" },
+        "toUserId": { "type": "string" },
+        "stripePI": { "type": "string" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "type", "amount", "createdAt"]
+    },
+    "Gift": {
+      "title": "Gift",
+      "description": "Live interaction gifts.",
+      "type": "object",
+      "properties": {
+        "liveId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "receiverId": { "type": "string" },
+        "giftType": { "type": "string", "enum": ["vibe", "chama", "diamante", "coroa", "vibebomb"] },
+        "coinsSpent": { "type": "number" },
+        "coinsToHost": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["liveId", "senderId", "receiverId", "giftType", "coinsSpent", "coinsToHost", "createdAt"]
+    },
+    "HostApplication": {
+      "title": "HostApplication",
+      "description": "Application to become a host.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayName": { "type": "string" },
+        "bio": { "type": "string" },
+        "categories": { "type": "array", "items": { "type": "string" } },
+        "socialLink": { "type": "string" },
+        "whyHost": { "type": "string" },
+        "hasEquipment": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+        "adminNote": { "type": "string" },
+        "reviewedAt": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userId", "displayName", "status", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "Message in a live chat.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "text": { "type": "string" },
+        "type": { "type": "string", "enum": ["system", "gift", "chat"] },
+        "giftType": { "type": "string" },
+        "cost": { "type": "number" },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["userName", "createdAt"]
+    },
+    "CoinPackage": {
+      "title": "CoinPackage",
+      "description": "A package of coins available for purchase.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "coins": { "type": "number" },
+        "bonus": { "type": "number" },
+        "priceBrl": { "type": "number" },
+        "order": { "type": "number" },
+        "isActive": { "type": "boolean" }
+      },
+      "required": ["name", "coins", "priceBrl"]
+    },
+    "Report": {
+      "title": "Report",
+      "description": "User report for violations.",
+      "type": "object",
+      "properties": {
+        "reporterId": { "type": "string" },
+        "reporterName": { "type": "string" },
+        "targetId": { "type": "string", "description": "ID of the live or user being reported" },
+        "targetType": { "type": "string", "enum": ["live", "user"] },
+        "reason": { "type": "string" },
+        "description": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "resolved", "dismissed"] },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["reporterId", "targetId", "targetType", "reason", "status", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profile data."
+    },
+    "/lives/{liveId}": {
+      "schema": "Live",
+      "description": "Active and past live streams."
+    },
+    "/lives/{liveId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Messages for a specific live."
+    },
+    "/transactions/{transactionId}": {
+      "schema": "CoinTransaction",
+      "description": "Transaction logs."
+    },
+    "/gifts/{giftId}": {
+      "schema": "Gift",
+      "description": "Gift events."
+    },
+    "/applications/{applicationId}": {
+      "schema": "HostApplication",
+      "description": "Applications for host status."
+    },
+    "/system/store_config/packages/{packageId}": {
+      "schema": "CoinPackage",
+      "description": "Configurable coin packages."
+    },
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "User grievance reports."
+    }
+  }
+}
