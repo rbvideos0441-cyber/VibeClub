@@ -11,6 +11,7 @@ import HostDashboard from './pages/HostDashboard';
 import Profile from './pages/Profile';
 import { useState, useEffect } from 'react';
 
+// VibeClub Production Build: 2026-04-18
 export default function App() {
   const [currentPath, setCurrentPath] = useState(window.location.pathname);
   const { user } = useAuth(); // We might need this to handle conditional redirects but mostly for currentPath

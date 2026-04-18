@@ -6,11 +6,8 @@ import firebaseConfig from '../firebase-applet-config.json';
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 
-// Robust Firestore initialization
-const dbId = firebaseConfig.firestoreDatabaseId;
-export const db = (dbId && dbId !== '(default)' && dbId !== 'default') 
-  ? getFirestore(app, dbId) 
-  : getFirestore(app);
+// Use default database for this project
+export const db = getFirestore(app);
 
 export const googleProvider = new GoogleAuthProvider();
 

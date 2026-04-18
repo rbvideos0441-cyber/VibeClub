@@ -3,8 +3,8 @@
   "appId": "1:685956837870:web:273e4c14d35b30f0025eff",
   "apiKey": "AIzaSyBlr1DoXZKyQUTaYh0lqOakzgxe9xSANug",
   "authDomain": "vibeclub-52f10.firebaseapp.com",
-  "firestoreDatabaseId": "(default)",
   "storageBucket": "vibeclub-52f10.firebasestorage.app",
   "messagingSenderId": "685956837870",
-  "measurementId": ""
+  "firestoreDatabaseId": "(default)",
+  "buildVersion": "2.0.1-final"
 }
