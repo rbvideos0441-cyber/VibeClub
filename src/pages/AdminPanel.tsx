@@ -13,8 +13,13 @@ export default function AdminPanel() {
   const [packages, setPackages] = useState<CoinPackage[]>([]);
   const [reports, setReports] = useState<any[]>([]);
   const [hosts, setHosts] = useState<any[]>([]);
+  const [hostSearch, setHostSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'apps' | 'lives' | 'store' | 'reports' | 'hosts'>('apps');
+  const [reportFilter, setReportFilter] = useState({
+    status: 'all' as 'all' | 'pending' | 'resolved' | 'dismissed',
+    type: 'all' as 'all' | 'live' | 'user'
+  });
 
   const [editingPkg, setEditingPkg] = useState<Partial<CoinPackage> | null>(null);
 
@@ -164,6 +169,17 @@ export default function AdminPanel() {
     window.history.pushState({}, '', href);
     window.dispatchEvent(new Event('pushstate'));
   };
+
+  const filteredReports = reports.filter(r => {
+    const statusMatch = reportFilter.status === 'all' || r.status === reportFilter.status;
+    const typeMatch = reportFilter.type === 'all' || r.targetType === reportFilter.type;
+    return statusMatch && typeMatch;
+  });
+
+  const filteredHosts = hosts.filter(h => {
+    const search = hostSearch.toLowerCase();
+    return h.name.toLowerCase().includes(search) || h.id.toLowerCase().includes(search) || h.email.toLowerCase().includes(search);
+  });
 
   if (user?.role !== 'admin') return <div className="p-20 text-center">Acesso negado. Apenas administradores.</div>;
 
@@ -394,12 +410,38 @@ export default function AdminPanel() {
       )}
       {activeTab === 'reports' && (
         <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <AlertTriangle className="text-red" size={20} />
-            Denúncias Recebidas ({reports.length})
-          </h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <AlertTriangle className="text-red" size={20} />
+              Denúncias Recebidas ({filteredReports.length})
+            </h2>
+            
+            <div className="flex flex-wrap gap-2">
+              <select 
+                value={reportFilter.status}
+                onChange={(e) => setReportFilter(prev => ({ ...prev, status: e.target.value as any }))}
+                className="bg-surface border border-border-subtle rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:border-teal/50 transition-colors"
+              >
+                <option value="all">Todos Status</option>
+                <option value="pending">Pendentes</option>
+                <option value="resolved">Resolvidas</option>
+                <option value="dismissed">Descartadas</option>
+              </select>
+
+              <select 
+                value={reportFilter.type}
+                onChange={(e) => setReportFilter(prev => ({ ...prev, type: e.target.value as any }))}
+                className="bg-surface border border-border-subtle rounded-lg px-3 py-1.5 text-xs font-bold outline-none focus:border-teal/50 transition-colors"
+              >
+                <option value="all">Todos Tipos</option>
+                <option value="live">Lives</option>
+                <option value="user">Usuários</option>
+              </select>
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 gap-4">
-            {reports.map(report => (
+            {filteredReports.map(report => (
               <div key={report.id} className="bg-card border border-border-subtle p-6 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-3">
@@ -462,9 +504,9 @@ export default function AdminPanel() {
                 </div>
               </div>
             ))}
-            {reports.length === 0 && (
+            {filteredReports.length === 0 && (
               <p className="text-text-muted text-center py-20 border-2 border-dashed border-border-subtle rounded-3xl">
-                Nenhuma denúncia pendente.
+                Nenhuma denúncia encontrada para estes filtros.
               </p>
             )}
           </div>
@@ -472,22 +514,43 @@ export default function AdminPanel() {
       )}
       {activeTab === 'hosts' && (
         <section className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <h2 className="text-xl font-bold flex items-center gap-2">
-            <Users className="text-teal" size={20} />
-            Hosts Ativos ({hosts.length})
-          </h2>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <Users className="text-teal" size={20} />
+              Hosts Ativos ({filteredHosts.length})
+            </h2>
+
+            <div className="relative w-full md:w-64">
+              <input 
+                type="text" 
+                placeholder="Buscar por nome, email ou ID..."
+                value={hostSearch}
+                onChange={(e) => setHostSearch(e.target.value)}
+                className="w-full bg-surface border border-border-subtle rounded-xl px-4 py-2 text-sm focus:outline-none focus:border-teal/50 transition-all pl-10"
+              />
+              <Users className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" size={16} />
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {hosts.map(host => (
-              <div key={host.id} className="bg-card border border-border-subtle p-4 rounded-2xl flex items-center justify-between gap-4">
+            {filteredHosts.map(host => (
+              <div key={host.id} className="bg-card border border-border-subtle p-4 rounded-2xl flex items-center justify-between gap-4 hover:border-teal/20 transition-all group">
                 <div className="flex items-center gap-4 flex-1 min-w-0">
-                  <div className="w-12 h-12 rounded-xl bg-surface overflow-hidden shrink-0">
+                  <div className="w-12 h-12 rounded-xl bg-surface overflow-hidden shrink-0 border border-white/5">
                     <img src={host.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${host.id}`} className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold truncate">{host.name}</h4>
-                    <p className="text-xs text-text-muted truncate">{host.email}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] font-mono text-teal bg-teal/5 px-2 py-0.5 rounded">◈ {host.coins.toLocaleString()} moedas</span>
+                    <h4 className="font-bold truncate group-hover:text-teal transition-colors">{host.name}</h4>
+                    <p className="text-[10px] text-text-muted truncate font-mono">{host.id}</p>
+                    <div className="flex items-center gap-4 mt-1">
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Saldo</span>
+                        <span className="text-xs font-mono text-teal bg-teal/5 px-2 py-0.5 rounded w-fit">◈ {host.coins.toLocaleString()}</span>
+                      </div>
+                      <div className="flex flex-col border-l border-white/5 pl-4">
+                        <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider">Acumulado</span>
+                        <span className="text-xs font-mono text-amber bg-amber/5 px-2 py-0.5 rounded w-fit">◈ {(host.totalEarnings || 0).toLocaleString()}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -509,9 +572,9 @@ export default function AdminPanel() {
                 </div>
               </div>
             ))}
-            {hosts.length === 0 && (
+            {filteredHosts.length === 0 && (
               <p className="col-span-full text-text-muted text-center py-20 border-2 border-dashed border-border-subtle rounded-3xl">
-                Nenhum host cadastrado no momento.
+                Nenhum host encontrado para esta busca.
               </p>
             )}
           </div>

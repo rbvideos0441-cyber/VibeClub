@@ -15,6 +15,9 @@ export interface User {
   gallery?: BioPhoto[];
   role: UserRole;
   coins: number;
+  totalEarnings?: number;
+  birthDate?: number; // timestamp
+  isAgeVerified: boolean;
   createdAt: number;
 }
 

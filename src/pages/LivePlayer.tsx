@@ -16,6 +16,8 @@ export default function LivePlayer() {
   const [newMessage, setNewMessage] = useState('');
   const [participants, setParticipants] = useState<any[]>([]);
   const [isCameraReady, setIsCameraReady] = useState(false);
+  const [showGifts, setShowGifts] = useState(false);
+  const [celebration, setCelebration] = useState<{ type: string; id: string } | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const hostVideoRef = useRef<HTMLVideoElement>(null);
   const localStreamRef = useRef<MediaStream | null>(null);
@@ -111,7 +113,15 @@ export default function LivePlayer() {
       limit(50)
     );
     const unsubscribeChat = onSnapshot(q, (snapshot) => {
-      setChatMessages(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+      setChatMessages(messages);
+
+      // Trigger celebration for the latest gift if it's new
+      const latestMessage = messages[messages.length - 1];
+      if (latestMessage?.type === 'gift' && latestMessage.createdAt > Date.now() - 5000) {
+        setCelebration({ type: latestMessage.giftType, id: latestMessage.id });
+        setTimeout(() => setCelebration(null), 4000);
+      }
     }, (err) => {
       handleFirestoreError(err, OperationType.LIST, `lives/${liveId}/messages`);
     });
@@ -158,6 +168,12 @@ export default function LivePlayer() {
       // 1. Debit user
       await updateDoc(doc(db, 'users', user.id), {
         coins: increment(-cost)
+      });
+
+      // 1.1 Credit host
+      await updateDoc(doc(db, 'users', live.hostId), {
+        coins: increment(cost),
+        totalEarnings: increment(cost)
       });
 
       // 2. Log transaction
@@ -569,13 +585,34 @@ export default function LivePlayer() {
         </div>
 
         {/* Action Controls - Ultra Compact for mobile */}
-        <div className="px-2 lg:px-6 pb-2 lg:pb-6 flex items-center gap-1.5 lg:gap-3 shrink-0">
+        <div className="px-2 lg:px-6 pb-2 lg:pb-6 flex items-center gap-1.5 lg:gap-3 shrink-0 relative">
           <button onClick={joinSlot} className="flex-1 bg-white/5 border border-white/10 text-white rounded-lg py-1.5 lg:py-3 text-[8px] lg:text-xs font-black uppercase tracking-wider hover:bg-white/10 transition-colors">
             Janela
           </button>
-          <button className="flex-1 bg-teal text-bg rounded-lg py-1.5 lg:py-3 text-[8px] lg:text-xs font-black uppercase tracking-wider hover:bg-teal-glow shadow-lg transition-all">
-            Presentear
-          </button>
+          <div className="flex-1 relative">
+            <button 
+              onClick={() => setShowGifts(!showGifts)}
+              className="w-full bg-teal text-bg rounded-lg py-1.5 lg:py-3 text-[8px] lg:text-xs font-black uppercase tracking-wider hover:bg-teal-glow shadow-lg transition-all"
+            >
+              Presentear
+            </button>
+            <AnimatePresence>
+              {showGifts && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: -10, scale: 1 }}
+                  exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                  className="absolute bottom-full left-0 right-0 mb-2 p-3 bg-surface border border-white/10 rounded-2xl shadow-2xl z-50 flex justify-between gap-1"
+                >
+                  <GiftButton icon={<Heart size={16} />} label="Coração" cost={10} color="text-red" onClick={() => sendGift('Heart', 10)} />
+                  <GiftButton icon={<Flame size={16} />} label="Fogo" cost={50} color="text-orange" onClick={() => sendGift('Flame', 50)} />
+                  <GiftButton icon={<Gem size={16} />} label="Gema" cost={200} color="text-teal" onClick={() => sendGift('Gem', 200)} />
+                  <GiftButton icon={<Crown size={16} />} label="Coroa" cost={500} color="text-amber" onClick={() => sendGift('Crown', 500)} />
+                  <GiftButton icon={<Bomb size={16} />} label="Bomba" cost={1000} color="text-black" onClick={() => sendGift('Bomb', 1000)} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
@@ -672,6 +709,124 @@ export default function LivePlayer() {
         targetType="live"
         targetName={`${live.title} (by ${live.hostName})`}
       />
+      
+      {/* Celebration Overlay */}
+      <CelebrationOverlay celebration={celebration} />
+    </div>
+  );
+}
+
+function CelebrationOverlay({ celebration }: { celebration: { type: string; id: string } | null }) {
+  if (!celebration) return null;
+
+  const renderEffect = () => {
+    switch (celebration.type) {
+      case 'Heart':
+        return Array.from({ length: 20 }).map((_, i) => (
+          <motion.div
+            key={`${celebration.id}-${i}`}
+            initial={{ opacity: 1, scale: 0, x: '50%', y: '80%' }}
+            animate={{ 
+              opacity: 0, 
+              scale: [1, 1.5, 1],
+              x: `${Math.random() * 100}%`, 
+              y: `${Math.random() * 50}%` 
+            }}
+            transition={{ duration: 3, ease: 'easeOut', delay: i * 0.1 }}
+            className="absolute text-red pointer-events-none"
+          >
+            <Heart size={32} fill="currentColor" />
+          </motion.div>
+        ));
+      case 'Flame':
+        return Array.from({ length: 30 }).map((_, i) => (
+          <motion.div
+            key={`${celebration.id}-${i}`}
+            initial={{ opacity: 0, scale: 1, x: `${Math.random() * 100}%`, y: '100%' }}
+            animate={{ 
+              opacity: [0, 1, 0],
+              scale: [1, 2, 1],
+              y: '0%' 
+            }}
+            transition={{ duration: 2, ease: 'linear', delay: i * 0.05 }}
+            className="absolute text-orange pointer-events-none"
+          >
+            <Flame size={48} fill="currentColor" />
+          </motion.div>
+        ));
+      case 'Gem':
+        return Array.from({ length: 25 }).map((_, i) => (
+          <motion.div
+            key={`${celebration.id}-${i}`}
+            initial={{ opacity: 1, rotate: 0, x: `${Math.random() * 100}%`, y: '-10%' }}
+            animate={{ 
+              opacity: [1, 1, 0],
+              rotate: 360,
+              y: '110%' 
+            }}
+            transition={{ duration: 4, ease: 'bounceOut', delay: i * 0.15 }}
+            className="absolute text-teal pointer-events-none"
+          >
+            <Gem size={24} fill="currentColor" />
+          </motion.div>
+        ));
+      case 'Crown':
+        return (
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
+             <motion.div
+              initial={{ scale: 0, rotate: -45 }}
+              animate={{ scale: [0, 1.5, 1], rotate: 0 }}
+              exit={{ scale: 0, opacity: 0 }}
+              transition={{ duration: 1, type: 'spring' }}
+              className="text-amber drop-shadow-2xl"
+            >
+              <Crown size={120} fill="currentColor" />
+            </motion.div>
+            {/* Confetti simulation */}
+            {Array.from({ length: 50 }).map((_, i) => (
+              <motion.div
+                key={`${celebration.id}-confetti-${i}`}
+                initial={{ x: '50%', y: '50%', scale: 0 }}
+                animate={{ 
+                  x: `${Math.random() * 100}%`,
+                  y: `${Math.random() * 100}%`,
+                  scale: [0, 1, 0],
+                  rotate: Math.random() * 360
+                }}
+                transition={{ duration: 3, delay: 0.5 }}
+                className={`absolute w-2 h-2 rounded-sm ${['bg-teal', 'bg-red', 'bg-amber', 'bg-purple-500'][i % 4]}`}
+              />
+            ))}
+          </div>
+        );
+      case 'Bomb':
+        return (
+          <motion.div 
+            animate={{ 
+              x: [0, -20, 20, -20, 20, 0],
+              y: [0, 20, -20, 20, -20, 0]
+            }}
+            transition={{ duration: 0.5, repeat: 2 }}
+            className="absolute inset-0 flex items-center justify-center pointer-events-none bg-red/10"
+          >
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: [0, 2, 0], opacity: [1, 1, 0] }}
+              transition={{ duration: 1 }}
+              className="text-black"
+            >
+              <Bomb size={200} fill="currentColor" />
+            </motion.div>
+          </motion.div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="absolute inset-0 z-50 overflow-hidden pointer-events-none">
+      {renderEffect()}
     </div>
   );
 }

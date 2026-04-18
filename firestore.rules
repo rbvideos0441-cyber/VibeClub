@@ -15,6 +15,9 @@ service cloud.firestore {
     //   - bio: string (optional, < 300)
     //   - role: string (required, ['viewer', 'host', 'admin'])
     //   - coins: number (required, >= 0)
+    //   - totalEarnings: number (optional, >= 0)
+    //   - birthDate: number (optional, timestamp)
+    //   - isAgeVerified: boolean (required)
     //   - createdAt: number (required)
     //
     // Collection: lives
@@ -67,6 +70,13 @@ service cloud.firestore {
       return isAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'host';
     }
 
+    function isAdult() {
+      return isAuthenticated() && (
+        isAdmin() || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAgeVerified == true
+      );
+    }
+
     function hasOnlyAllowedFields(fields) {
       return request.resource.data.keys().hasOnly(fields);
     }
@@ -80,9 +90,12 @@ service cloud.firestore {
              isValidEmail(data.email) &&
              data.role in ['viewer', 'host', 'admin'] &&
              data.coins is number && data.coins >= 0 &&
+             (!('totalEarnings' in data) || (data.totalEarnings is number && data.totalEarnings >= 0)) &&
+             data.isAgeVerified is bool &&
              data.createdAt is number &&
              (!('avatar' in data) || data.avatar is string) &&
              (!('banner' in data) || data.banner is string) &&
+             (!('birthDate' in data) || data.birthDate is number) &&
              (!('bio' in data) || (data.bio is string && data.bio.size() <= 2000)) &&
              (!('gallery' in data) || (data.gallery is list && data.gallery.size() <= 10));
     }
@@ -103,7 +116,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create: if isOwner(userId) && isValidUser(request.resource.data) && (
-        (request.resource.data.role == 'viewer' && request.resource.data.coins == 0) ||
+        (request.resource.data.role == 'viewer' && request.resource.data.coins == 0 && request.resource.data.isAgeVerified == false) ||
         (request.auth.token.email == "rbvideos0441@gmail.com" && request.auth.token.email_verified == true)
       );
       allow update: if isAuthenticated() && (
@@ -113,9 +126,9 @@ service cloud.firestore {
     }
 
     match /lives/{liveId} {
-      allow read: if true;
-      allow create: if (isHost() || isAdmin()) && isValidLive(request.resource.data) && request.resource.data.hostId == request.auth.uid;
-      allow update: if isAuthenticated() && (
+      allow read: if isAdult();
+      allow create: if (isHost() || isAdmin()) && isAdult() && isValidLive(request.resource.data) && request.resource.data.hostId == request.auth.uid;
+      allow update: if isAdult() && (
         (resource.data.hostId == request.auth.uid && isValidLive(request.resource.data)) ||
         isAdmin() ||
         (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['viewerCount']))
@@ -123,8 +136,8 @@ service cloud.firestore {
       allow delete: if isAdmin() || (isAuthenticated() && resource.data.hostId == request.auth.uid);
 
       match /messages/{msgId} {
-        allow read: if isAuthenticated();
-        allow create: if isAuthenticated() && 
+        allow read: if isAdult();
+        allow create: if isAdult() && 
           (request.resource.data.keys().hasAll(['userName', 'createdAt']) && 
            request.resource.data.userName is string &&
            request.resource.data.createdAt is number);
@@ -139,18 +152,18 @@ service cloud.firestore {
     }
 
     match /transactions/{txId} {
-      allow read: if isOwner(resource.data.userId) || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid; // Actual coin modification must be server-side but for this demo we simulate
+      allow read: if (isOwner(resource.data.userId) || isAdmin()) && isAdult();
+      allow create: if isAdult() && request.resource.data.userId == request.auth.uid; // Actual coin modification must be server-side but for this demo we simulate
     }
 
     match /gifts/{giftId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+      allow read: if isAdult();
+      allow create: if isAdult() && request.resource.data.senderId == request.auth.uid;
     }
 
     match /applications/{appId} {
-      allow read: if isOwner(resource.data.userId) || isAdmin();
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid && request.resource.data.status == 'pending';
+      allow read: if (isOwner(resource.data.userId) || isAdmin()) && isAdult();
+      allow create: if isAdult() && request.resource.data.userId == request.auth.uid && request.resource.data.status == 'pending';
       allow update: if isAdmin();
     }
 

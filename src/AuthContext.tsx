@@ -10,6 +10,7 @@ interface AuthContextType {
   loading: boolean;
   signIn: () => Promise<void>;
   logout: () => Promise<void>;
+  verifyAge: (birthDate: number) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,6 +39,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               avatar: firebaseUser.photoURL || undefined,
               role: isAdminEmail ? 'admin' : 'viewer',
               coins: isAdminEmail ? 10000 : 0, 
+              isAgeVerified: false,
               createdAt: Date.now(),
             };
             setDoc(userRef, newUser).catch(err => {
@@ -56,6 +58,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setUser(null);
         setLoading(false);
       }
+    }, (error) => {
+      console.error("Auth state change error:", error);
+      setLoading(false);
     });
 
     return () => unsubscribeAuth();
@@ -80,8 +85,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const verifyAge = async (birthDate: number) => {
+    if (!user) return;
+    try {
+      await setDoc(doc(db, 'users', user.id), {
+        birthDate,
+        isAgeVerified: true
+      }, { merge: true });
+      toast.success('Idade verificada com sucesso!');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `users/${user.id}`);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, logout }}>
+    <AuthContext.Provider value={{ user, loading, signIn, logout, verifyAge }}>
       {children}
     </AuthContext.Provider>
   );

@@ -22,9 +22,12 @@
         },
         "role": { "type": "string", "enum": ["viewer", "host", "admin"] },
         "coins": { "type": "number", "description": "VibeCoins balance" },
+        "totalEarnings": { "type": "number", "description": "All-time earned coins from gifts" },
+        "birthDate": { "type": "number", "description": "Timestamp of birth" },
+        "isAgeVerified": { "type": "boolean", "description": "Whether the user passed the age gate" },
         "createdAt": { "type": "number" }
       },
-      "required": ["name", "email", "role", "coins", "createdAt"]
+      "required": ["name", "email", "role", "coins", "isAgeVerified", "createdAt"]
     },
     "Live": {
       "title": "Live",

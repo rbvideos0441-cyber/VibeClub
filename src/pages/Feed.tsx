@@ -1,14 +1,19 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { LiveCard } from '../components/LiveCard';
 import { Live } from '../types';
 import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useAuth } from '../AuthContext';
+import { Compass, Zap, X } from 'lucide-react';
 
 export default function Feed() {
+  const { user } = useAuth();
   const [lives, setLives] = useState<Live[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState<string>('Tudo');
+  const [newLiveNotif, setNewLiveNotif] = useState<Live | null>(null);
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     const livesRef = collection(db, 'lives');
@@ -30,8 +35,25 @@ export default function Feed() {
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const livesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Live));
+      
+      // Detect new lives for notifications (only if user is logged in and it's not the first load)
+      if (user && !isInitialLoad.current) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const newLive = { id: change.doc.id, ...change.doc.data() } as Live;
+            // Only notify for lives that aren't already in our list (to avoid duplicates)
+            if (!lives.find(l => l.id === newLive.id)) {
+              setNewLiveNotif(newLive);
+              // Auto-hide after 5 seconds
+              setTimeout(() => setNewLiveNotif(null), 5000);
+            }
+          }
+        });
+      }
+
       setLives(livesData);
       setLoading(false);
+      isInitialLoad.current = false;
     }, (err) => {
       handleFirestoreError(err, OperationType.LIST, 'lives');
       setLoading(false);
@@ -43,7 +65,32 @@ export default function Feed() {
   const categories = ['Tudo', 'Música', 'Gaming', 'Conversa', 'Arte', 'Esportes', 'Educação'];
 
   return (
-    <div className="px-4 md:px-8 py-8 animate-in fade-in duration-500">
+    <div className="px-4 md:px-8 py-8 animate-in fade-in duration-500 relative">
+      <AnimatePresence>
+        {newLiveNotif && (
+          <motion.div 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+          >
+            <div className="bg-teal/90 backdrop-blur-md text-bg px-4 py-2 rounded-full shadow-teal-glow flex items-center gap-3 pointer-events-auto border border-white/20">
+              <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+              <Zap size={14} className="fill-current" />
+              <span className="text-xs font-black uppercase tracking-wider">
+                Nova Live: <span className="underline decoration-bg/30">{newLiveNotif.hostName}</span> começou agora!
+              </span>
+              <button 
+                onClick={() => setNewLiveNotif(null)}
+                className="hover:bg-black/10 rounded-full p-0.5 transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
         <div>
           <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-text-main to-teal-glow">
@@ -95,5 +142,3 @@ export default function Feed() {
     </div>
   );
 }
-
-import { Compass } from 'lucide-react';

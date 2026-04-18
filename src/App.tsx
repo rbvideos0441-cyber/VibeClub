@@ -1,6 +1,7 @@
 import { Toaster } from 'react-hot-toast';
 import { useAuth } from './AuthContext';
 import { Navbar } from './components/Navbar';
+import { AgeGate } from './components/AgeGate';
 import Feed from './pages/Feed';
 import LivePlayer from './pages/LivePlayer';
 import Store from './pages/Store';
@@ -41,6 +42,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-bg text-text-main">
+      <AgeGate />
       <Navbar />
       <main className="pt-16 min-h-[calc(100vh-64px)] overflow-x-hidden">
         {renderPage()}
