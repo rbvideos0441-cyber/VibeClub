@@ -172,7 +172,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    match /system/{doc} {
+    match /system/{allPaths=**} {
       allow read: if true;
       allow write: if isAdmin();
     }
