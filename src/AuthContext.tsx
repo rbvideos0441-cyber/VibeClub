@@ -49,7 +49,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           setLoading(false);
         }, (error) => {
-          handleFirestoreError(error, OperationType.GET, `users/${firebaseUser.uid}`);
+          console.error("Firestore error in AuthContext:", error);
+          // Don't throw here to avoid breaking the app state
           setLoading(false);
         });
 
