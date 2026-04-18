@@ -39,10 +39,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               avatar: firebaseUser.photoURL || undefined,
               role: isAdminEmail ? 'admin' : 'viewer',
               coins: isAdminEmail ? 10000 : 0, 
+              totalEarnings: 0,
               isAgeVerified: false,
               createdAt: Date.now(),
             };
             setDoc(userRef, newUser).catch(err => {
+              console.error("Critical: Failed to create user document", err);
               handleFirestoreError(err, OperationType.CREATE, `users/${firebaseUser.uid}`);
             });
             setUser(newUser);
